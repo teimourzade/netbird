@@ -1,9 +1,9 @@
-name: Mirror Zitadel and Netbird to Docker Hub
+name: Mirror Zitadel and Netbird (Lightweight Mirror)
 
 on:
-  workflow_dispatch: # اجرای دستی
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0' # اجرای خودکار هر یکشنبه ساعت ۱۲ شب برای آپدیت شدن ایمیج‌ها
+    - cron: "0 0 * * 0"
 
 jobs:
   mirror:
@@ -11,12 +11,12 @@ jobs:
     strategy:
       matrix:
         include:
-          # --- Zitadel ---
+          # Zitadel
           - src: ghcr.io/zitadel/zitadel
             dst: zitadel-mirror
             tag: latest
-          
-          # --- Netbird Components ---
+
+          # Netbird
           - src: ghcr.io/netbirdio/netbird
             dst: netbird-client-mirror
             tag: latest
@@ -37,13 +37,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Pull, Tag and Push
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Mirror image manifest (no layer push)
         run: |
-          # کشیدن ایمیج از GHCR
-          docker pull ${{ matrix.src }}:${{ matrix.tag }}
-          
-          # تگ کردن برای داکر هاب شخصی (فرمت: username/repo-name:tag)
-          docker tag ${{ matrix.src }}:${{ matrix.tag }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
-          
-          # آپلود در داکر هاب
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
+          docker buildx imagetools create \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }} \
+            ${{ matrix.src }}:${{ matrix.tag }}
