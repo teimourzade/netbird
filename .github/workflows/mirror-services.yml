@@ -1,9 +1,7 @@
-name: Mirror Zitadel and Netbird (Lightweight Mirror)
+name: Mirror Zitadel and Netbird
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * 0"
 
 jobs:
   mirror:
@@ -11,24 +9,33 @@ jobs:
     strategy:
       matrix:
         include:
-          # Zitadel
+          # Zitadel (GHCR)
           - src: ghcr.io/zitadel/zitadel
             dst: zitadel-mirror
             tag: latest
+            registry: ghcr
 
-          # Netbird
+          # Netbird (GHCR)
           - src: ghcr.io/netbirdio/netbird
             dst: netbird-client-mirror
             tag: latest
+            registry: ghcr
+
           - src: ghcr.io/netbirdio/management
             dst: netbird-management-mirror
             tag: latest
-          - src: ghcr.io/netbirdio/dashboard
-            dst: netbird-dashboard-mirror
-            tag: latest
+            registry: ghcr
+
           - src: ghcr.io/netbirdio/signal
             dst: netbird-signal-mirror
             tag: latest
+            registry: ghcr
+
+          # Dashboard (ONLY DockerHub)
+          - src: netbirdio/dashboard
+            dst: netbird-dashboard-mirror
+            tag: latest
+            registry: dockerhub
 
     steps:
       - name: Login to Docker Hub
@@ -40,8 +47,17 @@ jobs:
       - name: Setup buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Mirror image manifest (no layer push)
+      - name: Mirror GHCR manifests
+        if: matrix.registry == 'ghcr'
         run: |
           docker buildx imagetools create \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }} \
             ${{ matrix.src }}:${{ matrix.tag }}
+
+      - name: Pull/Tag/Push for DockerHub-only images
+        if: matrix.registry == 'dockerhub'
+        run: |
+          docker pull ${{ matrix.src }}:${{ matrix.tag }}
+          docker tag ${{ matrix.src }}:${{ matrix.tag }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
