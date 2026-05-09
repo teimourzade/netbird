@@ -1,0 +1,49 @@
+name: Mirror Zitadel and Netbird to Docker Hub
+
+on:
+  workflow_dispatch: # اجرای دستی
+  schedule:
+    - cron: '0 0 * * 0' # اجرای خودکار هر یکشنبه ساعت ۱۲ شب برای آپدیت شدن ایمیج‌ها
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # --- Zitadel ---
+          - src: ghcr.io/zitadel/zitadel
+            dst: zitadel-mirror
+            tag: latest
+          
+          # --- Netbird Components ---
+          - src: ghcr.io/netbirdio/netbird
+            dst: netbird-client-mirror
+            tag: latest
+          - src: ghcr.io/netbirdio/management
+            dst: netbird-management-mirror
+            tag: latest
+          - src: ghcr.io/netbirdio/dashboard
+            dst: netbird-dashboard-mirror
+            tag: latest
+          - src: ghcr.io/netbirdio/signal
+            dst: netbird-signal-mirror
+            tag: latest
+
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull, Tag and Push
+        run: |
+          # کشیدن ایمیج از GHCR
+          docker pull ${{ matrix.src }}:${{ matrix.tag }}
+          
+          # تگ کردن برای داکر هاب شخصی (فرمت: username/repo-name:tag)
+          docker tag ${{ matrix.src }}:${{ matrix.tag }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
+          
+          # آپلود در داکر هاب
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.dst }}:${{ matrix.tag }}
