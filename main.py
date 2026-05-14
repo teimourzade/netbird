@@ -26,7 +26,14 @@ def main():
             last_link = f.read().strip()
 
     # عبور از کلودفلر و گرفتن RSS
-    scraper = cloudscraper.create_scraper()
+    #scraper = cloudscraper.create_scraper()
+    scraper = cloudscraper.create_scraper(
+    browser={
+        'browser': 'chrome',
+        'platform': 'windows',
+        'desktop': True
+    }
+)
     response = scraper.get(RSS_URL)
     
     if response.status_code != 200:
