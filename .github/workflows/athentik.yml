@@ -34,19 +34,19 @@ jobs:
 
       - name: Pull image
         run: |
-          docker pull $IMAGE_NAME:${{ steps.tag.outputs.tag }}
+          docker pull ${IMAGE_NAME}:${{ steps.tag.outputs.tag }}
 
       - name: Tag image
         run: |
           docker tag \
-            $IMAGE_NAME:${{ steps.tag.outputs.tag }} \
-            $TARGET_IMAGE:${{ steps.tag.outputs.tag }}
+            ${IMAGE_NAME}:${{ steps.tag.outputs.tag }} \
+            ${TARGET_IMAGE}:${{ steps.tag.outputs.tag }}
 
           docker tag \
-            $IMAGE_NAME:${{ steps.tag.outputs.tag }} \
-            $TARGET_IMAGE:latest
+            ${IMAGE_NAME}:${{ steps.tag.outputs.tag }} \
+            ${TARGET_IMAGE}:latest
 
       - name: Push image
         run: |
-          docker push $TARGET_IMAGE:${{ steps.tag.outputs.tag }}
-          docker push $TARGET_IMAGE:latest
+          docker push ${TARGET_IMAGE}:${{ steps.tag.outputs.tag }}
+          docker push ${TARGET_IMAGE}:latest
