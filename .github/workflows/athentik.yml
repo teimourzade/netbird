@@ -1,52 +1,39 @@
-name: Sync Authentik Image to Docker Hub
+name: Mirror Authentik to Docker Hub
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: '0 2 * * *'  # روزانه ساعت 2 صبح
+  workflow_dispatch:  # اجرای دستی
 
 jobs:
-  sync:
+  mirror:
     runs-on: ubuntu-latest
-
-    env:
-      IMAGE_NAME: ghcr.io/goauthentik/server
-      TARGET_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/authentik
-
+    
     steps:
-      - name: Get latest Authentik tag
-        id: tag
-        run: |
-          TAG=$(curl -s https://ghcr.io/v2/goauthentik/server/tags/list | \
-            jq -r '.tags[]' | \
-            grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | \
-            sort -V | \
-            tail -n1)
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag: $TAG"
-
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Pull image
+      
+      - name: Pull from GHCR
         run: |
-          docker pull ${IMAGE_NAME}:${{ steps.tag.outputs.tag }}
-
-      - name: Tag image
+          docker pull ghcr.io/goauthentik/server:2026.2.3
+          docker pull ghcr.io/goauthentik/server:latest
+      
+      - name: Tag for Docker Hub
         run: |
-          docker tag \
-            ${IMAGE_NAME}:${{ steps.tag.outputs.tag }} \
-            ${TARGET_IMAGE}:${{ steps.tag.outputs.tag }}
-
-          docker tag \
-            ${IMAGE_NAME}:${{ steps.tag.outputs.tag }} \
-            ${TARGET_IMAGE}:latest
-
-      - name: Push image
+          docker tag ghcr.io/goauthentik/server:2026.2.3 ${{ secrets.DOCKERHUB_USERNAME }}/authentik-server:2026.2.3
+          docker tag ghcr.io/goauthentik/server:latest ${{ secrets.DOCKERHUB_USERNAME }}/authentik-server:latest
+      
+      - name: Push to Docker Hub
         run: |
-          docker push ${TARGET_IMAGE}:${{ steps.tag.outputs.tag }}
-          docker push ${TARGET_IMAGE}:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/authentik-server:2026.2.3
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/authentik-server:latest
